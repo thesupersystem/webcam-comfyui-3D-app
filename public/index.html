@@ -1,0 +1,461 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam + Three.js + ComfyUI Server</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #threejs-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .ui-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .webcam-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 300px;
+            height: 225px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            pointer-events: all;
+        }
+
+        #webcam-video {
+            width: 100%;
+            height: 180px;
+            border-radius: 10px;
+            object-fit: cover;
+            background: #333;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            pointer-events: all;
+            min-width: 350px;
+            max-width: 400px;
+        }
+
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            margin: 5px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+            button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+            }
+
+            button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+            button.comfy-button {
+                background: linear-gradient(45deg, #9c27b0, #673ab7);
+                font-size: 16px;
+                padding: 15px 30px;
+                margin-top: 10px;
+                width: 100%;
+            }
+
+                button.comfy-button:hover {
+                    box-shadow: 0 8px 20px rgba(156, 39, 176, 0.4);
+                }
+
+        .status {
+            color: #4ecdc4;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .save-location {
+            color: #888;
+            font-size: 11px;
+            margin-top: 5px;
+            word-break: break-all;
+        }
+
+        .title {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+        }
+
+        .capture-preview {
+            margin-top: 15px;
+            max-width: 200px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .processing-indicator {
+            display: none;
+            color: #9c27b0;
+            font-size: 12px;
+            margin-top: 5px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        .server-status {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .online {
+            color: #4ecdc4;
+        }
+
+        .offline {
+            color: #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <div id="threejs-container"></div>
+
+    <div class="ui-overlay">
+        <div class="title">Webcam to 3D Mesh (Hunyuan3D)</div>
+        <div class="server-status" id="server-status">Checking server...</div>
+
+        <div class="webcam-container">
+            <video id="webcam-video" autoplay muted playsinline></video>
+        </div>
+
+        <div class="controls">
+            <button id="start-camera">Start Camera</button>
+            <button id="stop-camera" disabled>Stop Camera</button>
+            <button id="save-frame" class="comfy-button" disabled>🎨 Generate 3D Mesh</button>
+            <div class="status" id="status">Camera off</div>
+            <div class="save-location" id="save-location">Loading save location...</div>
+            <div class="processing-indicator" id="processing">Generating 3D mesh from webcam...</div>
+            <canvas id="capture-canvas" style="display: none;"></canvas>
+            <img id="capture-preview" class="capture-preview" alt="Captured frame">
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Server connection check
+        async function checkServer() {
+            const serverStatus = document.getElementById('server-status');
+            try {
+                const response = await fetch('/config');
+                if (response.ok) {
+                    const data = await response.json();
+                    serverStatus.innerHTML = `<span class="online">● Server Online</span>`;
+
+                    let locationText = `Input: ${data.inputFilename} | 3D Output: ${data.meshFolder}/${data.outputPrefix}_XXXXX.glb`;
+                    if (data.workflowLoaded) {
+                        locationText += ` | ${data.workflowType}: ✅ | Delay: ${data.delaySeconds}s`;
+                    } else {
+                        locationText += ` | Workflow: ❌`;
+                    }
+
+                    document.getElementById('save-location').textContent = locationText;
+
+                    // Test ComfyUI connection
+                    testComfyUIConnection();
+                } else {
+                    serverStatus.innerHTML = `<span class="offline">● Server Error</span>`;
+                }
+            } catch (error) {
+                serverStatus.innerHTML = `<span class="offline">● Server Offline</span>`;
+            }
+        }
+
+        async function testComfyUIConnection() {
+            try {
+                const response = await fetch('/test-comfyui');
+                const result = await response.json();
+
+                const statusDiv = document.getElementById('save-location');
+                const currentText = statusDiv.textContent;
+
+                if (result.success) {
+                    statusDiv.textContent = currentText + ' | ComfyUI: ✅';
+                    statusDiv.style.color = '#4ecdc4';
+                } else {
+                    statusDiv.textContent = currentText + ' | ComfyUI: ❌';
+                    statusDiv.style.color = '#ff6b6b';
+                }
+            } catch (error) {
+                const statusDiv = document.getElementById('save-location');
+                statusDiv.textContent = statusDiv.textContent + ' | ComfyUI: ❌';
+                statusDiv.style.color = '#ff6b6b';
+            }
+        }
+
+        // Three.js Scene Setup (same as before)
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x0a0a0a);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        document.getElementById('threejs-container').appendChild(renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(10, 10, 5);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+
+        // Create animated shapes
+        const shapes = [];
+
+        const torusGeometry = new THREE.TorusGeometry(2, 0.8, 16, 100);
+        const torusMaterial = new THREE.MeshPhongMaterial({ color: 0xff6b6b, transparent: true, opacity: 0.8 });
+        const torus = new THREE.Mesh(torusGeometry, torusMaterial);
+        torus.position.set(-5, 2, -10);
+        scene.add(torus);
+        shapes.push({ mesh: torus, rotationSpeed: { x: 0.01, y: 0.02, z: 0 } });
+
+        const cubeGeometry = new THREE.BoxGeometry(3, 3, 3);
+        const cubeMaterial = new THREE.MeshPhongMaterial({ color: 0x4ecdc4, transparent: true, opacity: 0.8 });
+        const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+        cube.position.set(5, 0, -8);
+        scene.add(cube);
+        shapes.push({ mesh: cube, rotationSpeed: { x: 0.02, y: 0.01, z: 0.015 } });
+
+        const sphereGeometry = new THREE.SphereGeometry(2, 32, 32);
+        const sphereMaterial = new THREE.MeshPhongMaterial({ color: 0xffeb3b, transparent: true, opacity: 0.8 });
+        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+        sphere.position.set(0, -3, -6);
+        scene.add(sphere);
+        shapes.push({ mesh: sphere, rotationSpeed: { x: 0.005, y: 0.03, z: 0.01 } });
+
+        camera.position.set(0, 2, 5);
+
+        // Webcam functionality
+        const video = document.getElementById('webcam-video');
+        const startButton = document.getElementById('start-camera');
+        const stopButton = document.getElementById('stop-camera');
+        const saveButton = document.getElementById('save-frame');
+        const status = document.getElementById('status');
+        const processing = document.getElementById('processing');
+        const captureCanvas = document.getElementById('capture-canvas');
+        const capturePreview = document.getElementById('capture-preview');
+
+        let stream = null;
+
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 640 }, height: { ideal: 480 } }
+                });
+                video.srcObject = stream;
+                startButton.disabled = true;
+                stopButton.disabled = false;
+                saveButton.disabled = false;
+                status.textContent = 'Camera active - Ready to save frames';
+                status.style.color = '#4ecdc4';
+            } catch (error) {
+                console.error('Error accessing camera:', error);
+                status.textContent = 'Camera access denied';
+                status.style.color = '#ff6b6b';
+            }
+        }
+
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+                stream = null;
+                startButton.disabled = false;
+                stopButton.disabled = true;
+                saveButton.disabled = true;
+                status.textContent = 'Camera off';
+                status.style.color = '#888';
+                capturePreview.style.display = 'none';
+            }
+        }
+
+        function captureFrame() {
+            if (!stream) return null;
+
+            captureCanvas.width = video.videoWidth;
+            captureCanvas.height = video.videoHeight;
+
+            const ctx = captureCanvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+
+            return captureCanvas.toDataURL('image/jpeg', 0.9);
+        }
+
+        async function saveFrameToServer() {
+            if (!stream) {
+                alert('Please start the camera first!');
+                return;
+            }
+
+            const imageData = captureFrame();
+            if (!imageData) {
+                alert('Failed to capture frame');
+                return;
+            }
+
+            // Show preview
+            capturePreview.src = imageData;
+            capturePreview.style.display = 'block';
+
+            // Show processing
+            processing.style.display = 'block';
+            saveButton.disabled = true;
+            status.textContent = 'Starting 3D mesh generation...';
+            status.style.color = '#9c27b0';
+
+            try {
+                const response = await fetch('/save-frame', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ imageData })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    status.textContent = `✅ ${result.filename} saved`;
+
+                    if (result.comfyui_enabled) {
+                        status.textContent += ` | 3D mesh generating in ${result.delay_seconds}s...`;
+
+                        // Update status after delay to show workflow was triggered
+                        setTimeout(() => {
+                            processing.style.display = 'none';
+                            saveButton.disabled = false;
+                            status.textContent = `🎨 3D mesh generation started! Check output folder.`;
+                            status.style.color = '#4ecdc4';
+                        }, (result.delay_seconds + 1) * 1000);
+
+                    } else {
+                        processing.style.display = 'none';
+                        saveButton.disabled = false;
+                        status.textContent += ` | No workflow configured`;
+                        status.style.color = '#4ecdc4';
+                    }
+
+                    console.log('Frame saved for 3D processing:', result.path);
+                } else {
+                    throw new Error(result.error);
+                }
+
+            } catch (error) {
+                console.error('Save error:', error);
+                processing.style.display = 'none';
+                saveButton.disabled = false;
+                status.textContent = 'Failed to save frame';
+                status.style.color = '#ff6b6b';
+            }
+        }
+
+        // Event listeners
+        startButton.addEventListener('click', startCamera);
+        stopButton.addEventListener('click', stopCamera);
+        saveButton.addEventListener('click', saveFrameToServer);
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            shapes.forEach(shape => {
+                shape.mesh.rotation.x += shape.rotationSpeed.x;
+                shape.mesh.rotation.y += shape.rotationSpeed.y;
+                shape.mesh.rotation.z += shape.rotationSpeed.z;
+            });
+
+            sphere.position.y = -3 + Math.sin(Date.now() * 0.002) * 0.5;
+            camera.position.x = Math.sin(Date.now() * 0.0005) * 2;
+            camera.lookAt(0, 0, -5);
+
+            renderer.render(scene, camera);
+        }
+
+        // Window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Initialize
+        checkServer();
+        animate();
+    </script>
+</body>
+</html>
