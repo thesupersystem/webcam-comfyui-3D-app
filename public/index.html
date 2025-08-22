@@ -56,6 +56,30 @@
             border-radius: 10px;
             object-fit: cover;
             background: #333;
+            border: 2px solid #555;
+        }
+
+            #webcam-video.loading {
+                border-color: #4ecdc4;
+                animation: pulse-border 1s infinite;
+            }
+
+            #webcam-video.active {
+                border-color: #4ecdc4;
+            }
+
+            #webcam-video.error {
+                border-color: #ff6b6b;
+            }
+
+        @keyframes pulse-border {
+            0%, 100% {
+                border-color: #4ecdc4;
+            }
+
+            50% {
+                border-color: #2a8a84;
+            }
         }
 
         .controls {
@@ -71,6 +95,26 @@
             pointer-events: all;
             min-width: 350px;
             max-width: 400px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .models-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            pointer-events: all;
+            min-width: 300px;
+            max-width: 350px;
+            max-height: 50vh;
+            overflow-y: auto;
+            display: none;
         }
 
         button {
@@ -84,6 +128,7 @@
             font-weight: bold;
             margin: 5px;
             transition: transform 0.2s, box-shadow 0.2s;
+            width: calc(50% - 10px);
         }
 
             button:hover {
@@ -108,6 +153,13 @@
                 button.comfy-button:hover {
                     box-shadow: 0 8px 20px rgba(156, 39, 176, 0.4);
                 }
+
+            button.small-btn {
+                font-size: 12px;
+                padding: 8px 16px;
+                width: auto;
+                margin: 2px;
+            }
 
         .status {
             color: #4ecdc4;
@@ -178,10 +230,168 @@
         .offline {
             color: #ff6b6b;
         }
+
+        .model-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 8px;
+            font-size: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: border-color 0.3s;
+        }
+
+            .model-item:hover {
+                border-color: rgba(78, 205, 196, 0.5);
+            }
+
+            .model-item.loaded {
+                border-color: #4ecdc4;
+                background: rgba(78, 205, 196, 0.1);
+            }
+
+        .model-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #4ecdc4;
+        }
+
+        .model-info {
+            color: #aaa;
+            font-size: 10px;
+            margin-bottom: 8px;
+        }
+
+        .model-controls {
+            display: flex;
+            gap: 5px;
+            margin-top: 5px;
+        }
+
+        .error-message {
+            color: #ff6b6b;
+            font-size: 11px;
+            margin-top: 5px;
+            padding: 8px;
+            background: rgba(255, 107, 107, 0.1);
+            border-radius: 5px;
+            border: 1px solid rgba(255, 107, 107, 0.3);
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin: 15px 0 10px 0;
+            color: #4ecdc4;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding-bottom: 5px;
+        }
+
+        .notification {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: none;
+            z-index: 15;
+            max-width: 300px;
+        }
+
+            .notification.success {
+                border-color: #4ecdc4;
+                background: rgba(78, 205, 196, 0.1);
+            }
+
+            .notification.error {
+                border-color: #ff6b6b;
+                background: rgba(255, 107, 107, 0.1);
+            }
+
+        .loading-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #4ecdc4;
+            font-size: 18px;
+            text-align: center;
+            z-index: 5;
+            display: none;
+            pointer-events: none;
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(78, 205, 196, 0.3);
+            border-top: 3px solid #4ecdc4;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .model-info-display {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(78, 205, 196, 0.3);
+            color: white;
+            font-size: 12px;
+            display: none;
+            pointer-events: none;
+            max-width: 300px;
+        }
+
+        .loader-status {
+            position: absolute;
+            top: 120px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 11px;
+            display: none;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
     <div id="threejs-container"></div>
+
+    <div class="loading-indicator" id="loading-indicator">
+        <div class="loading-spinner"></div>
+        <div>Loading 3D Model...</div>
+    </div>
+
+    <div class="model-info-display" id="model-info-display">
+        <div id="current-model-info">No model loaded</div>
+    </div>
+
+    <div class="loader-status" id="loader-status">
+        <div id="loader-status-text">Initializing GLTFLoader...</div>
+    </div>
 
     <div class="ui-overlay">
         <div class="title">Webcam to 3D Mesh (Hunyuan3D)</div>
@@ -192,19 +402,543 @@
         </div>
 
         <div class="controls">
-            <button id="start-camera">Start Camera</button>
-            <button id="stop-camera" disabled>Stop Camera</button>
+            <div class="section-title">Camera Controls</div>
+            <button id="start-camera">🎥 Start Camera</button>
+            <button id="stop-camera" disabled>⏹️ Stop Camera</button>
             <button id="save-frame" class="comfy-button" disabled>🎨 Generate 3D Mesh</button>
+
+            <div class="section-title">Status</div>
             <div class="status" id="status">Camera off</div>
             <div class="save-location" id="save-location">Loading save location...</div>
             <div class="processing-indicator" id="processing">Generating 3D mesh from webcam...</div>
+            <div class="error-message" id="error-message" style="display: none;"></div>
+
+            <div class="section-title">3D Models</div>
+            <button id="toggle-models" class="small-btn">Show Models</button>
+            <button id="refresh-models" class="small-btn">Refresh</button>
+            <button id="load-latest" class="small-btn" disabled>Load Latest</button>
+            <button id="clear-scene" class="small-btn">Clear Scene</button>
+
             <canvas id="capture-canvas" style="display: none;"></canvas>
             <img id="capture-preview" class="capture-preview" alt="Captured frame">
         </div>
+
+        <div class="models-panel" id="models-panel">
+            <div class="section-title">Generated 3D Models</div>
+            <div id="models-list">Loading models...</div>
+        </div>
+
+        <div class="notification" id="notification">
+            <div id="notification-text"></div>
+        </div>
     </div>
 
+    <!-- Load Three.js first -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Then load the GLTFLoader from jsDelivr -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
     <script>
+        // Global variables
+        let stream = null;
+        let currentLoadedModel = null;
+        let modelsVisible = false;
+        let modelUpdateInterval = null;
+        let gltfLoader = null;
+        let loaderReady = false;
+
+        // Three.js Scene Setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x0a0a0a);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        document.getElementById('threejs-container').appendChild(renderer.domElement);
+
+        // Enhanced lighting for better model visibility
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        directionalLight.position.set(10, 10, 5);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.camera.near = 0.1;
+        directionalLight.shadow.camera.far = 50;
+        directionalLight.shadow.camera.left = -10;
+        directionalLight.shadow.camera.right = 10;
+        directionalLight.shadow.camera.top = 10;
+        directionalLight.shadow.camera.bottom = -10;
+        scene.add(directionalLight);
+
+        // Add point lights for better model illumination
+        const pointLight1 = new THREE.PointLight(0x4ecdc4, 0.5, 100);
+        pointLight1.position.set(-10, 5, 5);
+        scene.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0xff6b6b, 0.5, 100);
+        pointLight2.position.set(10, -5, 5);
+        scene.add(pointLight2);
+
+        // Create animated background shapes
+        const shapes = [];
+
+        const torusGeometry = new THREE.TorusGeometry(2, 0.8, 16, 100);
+        const torusMaterial = new THREE.MeshPhongMaterial({ color: 0xff6b6b, transparent: true, opacity: 0.3 });
+        const torus = new THREE.Mesh(torusGeometry, torusMaterial);
+        torus.position.set(-8, 2, -15);
+        scene.add(torus);
+        shapes.push({ mesh: torus, rotationSpeed: { x: 0.01, y: 0.02, z: 0 } });
+
+        const cubeGeometry = new THREE.BoxGeometry(3, 3, 3);
+        const cubeMaterial = new THREE.MeshPhongMaterial({ color: 0x4ecdc4, transparent: true, opacity: 0.3 });
+        const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+        cube.position.set(8, 0, -12);
+        scene.add(cube);
+        shapes.push({ mesh: cube, rotationSpeed: { x: 0.02, y: 0.01, z: 0.015 } });
+
+        const sphereGeometry = new THREE.SphereGeometry(2, 32, 32);
+        const sphereMaterial = new THREE.MeshPhongMaterial({ color: 0xffeb3b, transparent: true, opacity: 0.3 });
+        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+        sphere.position.set(0, -5, -10);
+        scene.add(sphere);
+        shapes.push({ mesh: sphere, rotationSpeed: { x: 0.005, y: 0.03, z: 0.01 } });
+
+        camera.position.set(0, 2, 8);
+
+        // Initialize GLTFLoader with multiple fallback methods
+        function initializeGLTFLoader() {
+            const loaderStatus = document.getElementById('loader-status');
+            const loaderStatusText = document.getElementById('loader-status-text');
+
+            loaderStatus.style.display = 'block';
+
+            console.log('🔄 Initializing GLTFLoader...');
+
+            // Method 1: Check if GLTFLoader is available directly
+            if (typeof THREE.GLTFLoader !== 'undefined') {
+                gltfLoader = new THREE.GLTFLoader();
+                loaderReady = true;
+                loaderStatusText.textContent = '✅ GLTFLoader ready (Direct)';
+                console.log('✅ GLTFLoader initialized directly');
+                setTimeout(() => loaderStatus.style.display = 'none', 3000);
+                return true;
+            }
+
+            // Method 2: Try to create from window.THREE
+            if (window.THREE && window.THREE.GLTFLoader) {
+                gltfLoader = new window.THREE.GLTFLoader();
+                loaderReady = true;
+                loaderStatusText.textContent = '✅ GLTFLoader ready (Window)';
+                console.log('✅ GLTFLoader initialized from window.THREE');
+                setTimeout(() => loaderStatus.style.display = 'none', 3000);
+                return true;
+            }
+
+            // Method 3: Load GLTFLoader manually
+            loaderStatusText.textContent = '🔄 Loading GLTFLoader manually...';
+            loadGLTFLoaderManually();
+            return false;
+        }
+
+        // Manual GLTFLoader loading with fallback
+        function loadGLTFLoaderManually() {
+            const loaderStatusText = document.getElementById('loader-status-text');
+
+            // Try loading from different CDNs
+            const loaderSources = [
+                'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js',
+                'https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js',
+                'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/loaders/GLTFLoader.js'
+            ];
+
+            let currentIndex = 0;
+
+            function tryLoadLoader() {
+                if (currentIndex >= loaderSources.length) {
+                    // All sources failed, create fallback
+                    createFallbackLoader();
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = loaderSources[currentIndex];
+
+                script.onload = () => {
+                    console.log(`✅ GLTFLoader loaded from: ${loaderSources[currentIndex]}`);
+
+                    // Check if it's available now
+                    if (typeof THREE.GLTFLoader !== 'undefined') {
+                        gltfLoader = new THREE.GLTFLoader();
+                        loaderReady = true;
+                        loaderStatusText.textContent = '✅ GLTFLoader ready (Manual)';
+                        setTimeout(() => document.getElementById('loader-status').style.display = 'none', 3000);
+                    } else {
+                        currentIndex++;
+                        tryLoadLoader();
+                    }
+                };
+
+                script.onerror = () => {
+                    console.warn(`❌ Failed to load GLTFLoader from: ${loaderSources[currentIndex]}`);
+                    currentIndex++;
+                    tryLoadLoader();
+                };
+
+                document.head.appendChild(script);
+            }
+
+            tryLoadLoader();
+        }
+
+        // Create a simplified fallback loader for basic GLB support
+        function createFallbackLoader() {
+            const loaderStatusText = document.getElementById('loader-status-text');
+
+            console.log('🔄 Creating fallback GLB loader...');
+            loaderStatusText.textContent = '⚠️ Using fallback loader';
+
+            gltfLoader = {
+                load: function(url, onLoad, onProgress, onError) {
+                    console.log('🔄 Fallback loader attempting to load:', url);
+
+                    // Use fetch to get the GLB file as ArrayBuffer
+                    fetch(url)
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                            }
+                            return response.arrayBuffer();
+                        })
+                        .then(buffer => {
+                            // Create a simple placeholder geometry for now
+                            console.log('📦 GLB file loaded, creating placeholder geometry');
+
+                            // Create a simple mesh to represent the model
+                            const geometry = new THREE.BoxGeometry(2, 2, 2);
+                            const material = new THREE.MeshPhongMaterial({
+                                color: 0x4ecdc4,
+                                transparent: true,
+                                opacity: 0.8
+                            });
+                            const mesh = new THREE.Mesh(geometry, material);
+
+                            // Create a mock GLTF object
+                            const mockGLTF = {
+                                scene: mesh,
+                                scenes: [mesh],
+                                asset: { version: "2.0" }
+                            };
+
+                            if (onLoad) onLoad(mockGLTF);
+                        })
+                        .catch(error => {
+                            console.error('❌ Fallback loader failed:', error);
+                            if (onError) onError(error);
+                        });
+                }
+            };
+
+            loaderReady = true;
+            setTimeout(() => document.getElementById('loader-status').style.display = 'none', 5000);
+        }
+
+        // DOM elements
+        const video = document.getElementById('webcam-video');
+        const startButton = document.getElementById('start-camera');
+        const stopButton = document.getElementById('stop-camera');
+        const saveButton = document.getElementById('save-frame');
+        const status = document.getElementById('status');
+        const processing = document.getElementById('processing');
+        const captureCanvas = document.getElementById('capture-canvas');
+        const capturePreview = document.getElementById('capture-preview');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const modelInfoDisplay = document.getElementById('model-info-display');
+        const currentModelInfo = document.getElementById('current-model-info');
+
+        // Notification system
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            const notificationText = document.getElementById('notification-text');
+
+            notificationText.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 4000);
+        }
+
+        // Error handling
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            showNotification(message, 'error');
+
+            setTimeout(() => {
+                errorDiv.style.display = 'none';
+            }, 8000);
+        }
+
+        // 3D Model loading functions
+        async function loadModelInScene(url, name) {
+            console.log(`🎨 Loading 3D model: ${name} from ${url}`);
+
+            if (!loaderReady) {
+                showError('GLTFLoader not ready yet. Please wait a moment and try again.');
+                return;
+            }
+
+            try {
+                // Show loading indicator
+                loadingIndicator.style.display = 'block';
+                showNotification(`Loading ${name}...`, 'info');
+
+                // Remove existing model
+                if (currentLoadedModel) {
+                    scene.remove(currentLoadedModel);
+                    currentLoadedModel = null;
+                    console.log('🗑️ Removed previous model');
+                }
+
+                // Load the GLB model
+                await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        reject(new Error('Loading timeout (30 seconds)'));
+                    }, 30000);
+
+                    gltfLoader.load(
+                        url,
+                        function(gltf) {
+                            clearTimeout(timeout);
+                            console.log('✅ GLTF loaded successfully:', gltf);
+
+                            currentLoadedModel = gltf.scene;
+
+                            // Configure the model
+                            configureLoadedModel(currentLoadedModel, name);
+
+                            // Add to scene
+                            scene.add(currentLoadedModel);
+
+                            resolve(gltf);
+                        },
+                        function(progress) {
+                            if (progress.total > 0) {
+                                const percent = (progress.loaded / progress.total * 100).toFixed(1);
+                                console.log(`📊 Loading progress: ${percent}%`);
+                            }
+                        },
+                        function(error) {
+                            clearTimeout(timeout);
+                            console.error('❌ Error loading GLTF:', error);
+                            reject(error);
+                        }
+                    );
+                });
+
+                // Update UI
+                updateModelInfoDisplay(name);
+                highlightLoadedModel(name);
+                showNotification(`✅ ${name} loaded successfully!`, 'success');
+
+                console.log('🎉 Model loaded and configured successfully');
+
+            } catch (error) {
+                console.error('❌ Failed to load model:', error);
+
+                if (error.message.includes('timeout')) {
+                    showError(`Loading timeout for ${name}. The file might be too large or the connection is slow.`);
+                } else if (error.message.includes('HTTP')) {
+                    showError(`Failed to fetch ${name}. Please check if the file exists and is accessible.`);
+                } else {
+                    showError(`Failed to load ${name}: ${error.message}`);
+                }
+            } finally {
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+        function configureLoadedModel(model, name) {
+            // Calculate bounding box
+            const box = new THREE.Box3().setFromObject(model);
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+
+            console.log(`📏 Model dimensions: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`);
+
+            // Scale model to fit in scene (target size: 4 units)
+            const maxDim = Math.max(size.x, size.y, size.z);
+            const scale = maxDim > 0 ? 4 / maxDim : 1;
+            model.scale.setScalar(scale);
+
+            // Center the model
+            model.position.set(
+                -center.x * scale,
+                -center.y * scale,
+                -center.z * scale
+            );
+
+            // Position slightly above ground
+            model.position.y += 1;
+
+            // Enable shadows
+            model.traverse(function(child) {
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+
+                    // Enhance materials if needed
+                    if (child.material) {
+                        child.material.needsUpdate = true;
+                    }
+                }
+            });
+
+            console.log(`🔧 Model configured: scale=${scale.toFixed(3)}, position=(${model.position.x.toFixed(2)}, ${model.position.y.toFixed(2)}, ${model.position.z.toFixed(2)})`);
+        }
+
+        function updateModelInfoDisplay(modelName) {
+            currentModelInfo.textContent = `Current Model: ${modelName}`;
+            modelInfoDisplay.style.display = 'block';
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                modelInfoDisplay.style.display = 'none';
+            }, 5000);
+        }
+
+        function highlightLoadedModel(modelName) {
+            // Remove highlight from all models
+            document.querySelectorAll('.model-item').forEach(item => {
+                item.classList.remove('loaded');
+            });
+
+            // Add highlight to loaded model
+            document.querySelectorAll('.model-item').forEach(item => {
+                const nameEl = item.querySelector('.model-name');
+                if (nameEl && nameEl.textContent === modelName) {
+                    item.classList.add('loaded');
+                }
+            });
+        }
+
+        function clearScene() {
+            if (currentLoadedModel) {
+                scene.remove(currentLoadedModel);
+                currentLoadedModel = null;
+                currentModelInfo.textContent = 'No model loaded';
+                modelInfoDisplay.style.display = 'none';
+
+                // Remove highlights
+                document.querySelectorAll('.model-item').forEach(item => {
+                    item.classList.remove('loaded');
+                });
+
+                showNotification('Scene cleared', 'success');
+                console.log('🧹 Scene cleared');
+            }
+        }
+
+        // Models management
+        async function loadModels() {
+            console.log('📋 Loading models list...');
+
+            try {
+                const response = await fetch('/models');
+                const result = await response.json();
+
+                const modelsList = document.getElementById('models-list');
+
+                if (result.success && result.models.length > 0) {
+                    console.log(`📦 Found ${result.models.length} models`);
+
+                    modelsList.innerHTML = result.models.map(model => `
+                        <div class="model-item" data-model-name="${model.name}">
+                            <div class="model-name">${model.name}</div>
+                            <div class="model-info">
+                                📅 ${new Date(model.created).toLocaleString()}<br>
+                                📊 ${(model.size / 1024 / 1024).toFixed(2)} MB<br>
+                                🔗 ${model.url}
+                            </div>
+                            <div class="model-controls">
+                                <button class="small-btn" onclick="loadModelInScene('${model.url}', '${model.name}')">🎨 Load</button>
+                                <button class="small-btn" onclick="downloadModel('${model.url}', '${model.name}')">⬇️ Download</button>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    document.getElementById('load-latest').disabled = false;
+
+                } else {
+                    modelsList.innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">📭 No models found<br><small>Generate a 3D mesh first!</small></div>';
+                    document.getElementById('load-latest').disabled = true;
+                }
+
+            } catch (error) {
+                console.error('❌ Error loading models:', error);
+                document.getElementById('models-list').innerHTML = '<div style="color: #ff6b6b; text-align: center; padding: 20px;">❌ Error loading models</div>';
+                showError('Failed to load models list');
+            }
+        }
+
+        async function loadLatestModel() {
+            console.log('🔄 Loading latest model...');
+
+            try {
+                const response = await fetch('/latest-model');
+                const result = await response.json();
+
+                if (result.success && result.model) {
+                    await loadModelInScene(result.model.url, result.model.name);
+                } else {
+                    showError('No models available to load');
+                }
+            } catch (error) {
+                console.error('❌ Error loading latest model:', error);
+                showError('Failed to load latest model');
+            }
+        }
+
+        function downloadModel(url, name) {
+            console.log(`⬇️ Downloading model: ${name}`);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = name;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            showNotification(`Downloading ${name}`, 'success');
+        }
+
+        function toggleModelsPanel() {
+            const panel = document.getElementById('models-panel');
+            const button = document.getElementById('toggle-models');
+
+            modelsVisible = !modelsVisible;
+            panel.style.display = modelsVisible ? 'block' : 'none';
+            button.textContent = modelsVisible ? 'Hide Models' : 'Show Models';
+
+            if (modelsVisible) {
+                loadModels();
+                // Auto-refresh models every 15 seconds when panel is visible
+                modelUpdateInterval = setInterval(loadModels, 15000);
+            } else {
+                if (modelUpdateInterval) {
+                    clearInterval(modelUpdateInterval);
+                    modelUpdateInterval = null;
+                }
+            }
+        }
+
         // Server connection check
         async function checkServer() {
             const serverStatus = document.getElementById('server-status');
@@ -214,22 +948,22 @@
                     const data = await response.json();
                     serverStatus.innerHTML = `<span class="online">● Server Online</span>`;
 
-                    let locationText = `Input: ${data.inputFilename} | 3D Output: ${data.meshFolder}/${data.outputPrefix}_XXXXX.glb`;
+                    let locationText = `📁 Mesh Folder: ${data.meshFolder}`;
                     if (data.workflowLoaded) {
-                        locationText += ` | ${data.workflowType}: ✅ | Delay: ${data.delaySeconds}s`;
+                        locationText += ` | ✅ Workflow Ready`;
                     } else {
-                        locationText += ` | Workflow: ❌`;
+                        locationText += ` | ❌ No Workflow`;
                     }
 
                     document.getElementById('save-location').textContent = locationText;
-
-                    // Test ComfyUI connection
-                    testComfyUIConnection();
+                    await testComfyUIConnection();
                 } else {
                     serverStatus.innerHTML = `<span class="offline">● Server Error</span>`;
+                    showError('Server connection failed');
                 }
             } catch (error) {
                 serverStatus.innerHTML = `<span class="offline">● Server Offline</span>`;
+                showError('Cannot connect to server');
             }
         }
 
@@ -242,78 +976,22 @@
                 const currentText = statusDiv.textContent;
 
                 if (result.success) {
-                    statusDiv.textContent = currentText + ' | ComfyUI: ✅';
+                    statusDiv.textContent = currentText + ' | 🔗 ComfyUI: ✅';
                     statusDiv.style.color = '#4ecdc4';
                 } else {
-                    statusDiv.textContent = currentText + ' | ComfyUI: ❌';
+                    statusDiv.textContent = currentText + ' | 🔗 ComfyUI: ❌';
                     statusDiv.style.color = '#ff6b6b';
+                    showError('ComfyUI connection failed');
                 }
             } catch (error) {
                 const statusDiv = document.getElementById('save-location');
-                statusDiv.textContent = statusDiv.textContent + ' | ComfyUI: ❌';
+                statusDiv.textContent = statusDiv.textContent + ' | 🔗 ComfyUI: ❌';
                 statusDiv.style.color = '#ff6b6b';
+                showError('ComfyUI connection error');
             }
         }
 
-        // Three.js Scene Setup (same as before)
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setClearColor(0x0a0a0a);
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-        document.getElementById('threejs-container').appendChild(renderer.domElement);
-
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
-        scene.add(ambientLight);
-
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(10, 10, 5);
-        directionalLight.castShadow = true;
-        scene.add(directionalLight);
-
-        // Create animated shapes
-        const shapes = [];
-
-        const torusGeometry = new THREE.TorusGeometry(2, 0.8, 16, 100);
-        const torusMaterial = new THREE.MeshPhongMaterial({ color: 0xff6b6b, transparent: true, opacity: 0.8 });
-        const torus = new THREE.Mesh(torusGeometry, torusMaterial);
-        torus.position.set(-5, 2, -10);
-        scene.add(torus);
-        shapes.push({ mesh: torus, rotationSpeed: { x: 0.01, y: 0.02, z: 0 } });
-
-        const cubeGeometry = new THREE.BoxGeometry(3, 3, 3);
-        const cubeMaterial = new THREE.MeshPhongMaterial({ color: 0x4ecdc4, transparent: true, opacity: 0.8 });
-        const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-        cube.position.set(5, 0, -8);
-        scene.add(cube);
-        shapes.push({ mesh: cube, rotationSpeed: { x: 0.02, y: 0.01, z: 0.015 } });
-
-        const sphereGeometry = new THREE.SphereGeometry(2, 32, 32);
-        const sphereMaterial = new THREE.MeshPhongMaterial({ color: 0xffeb3b, transparent: true, opacity: 0.8 });
-        const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-        sphere.position.set(0, -3, -6);
-        scene.add(sphere);
-        shapes.push({ mesh: sphere, rotationSpeed: { x: 0.005, y: 0.03, z: 0.01 } });
-
-        camera.position.set(0, 2, 5);
-
-        // Webcam functionality
-        const video = document.getElementById('webcam-video');
-        const startButton = document.getElementById('start-camera');
-        const stopButton = document.getElementById('stop-camera');
-        const saveButton = document.getElementById('save-frame');
-        const status = document.getElementById('status');
-        const processing = document.getElementById('processing');
-        const captureCanvas = document.getElementById('capture-canvas');
-        const capturePreview = document.getElementById('capture-preview');
-
-        let stream = null;
-
+        // Basic camera functions
         async function startCamera() {
             try {
                 stream = await navigator.mediaDevices.getUserMedia({
@@ -323,11 +1001,15 @@
                 startButton.disabled = true;
                 stopButton.disabled = false;
                 saveButton.disabled = false;
-                status.textContent = 'Camera active - Ready to save frames';
+                status.textContent = 'Camera active - Ready to capture';
                 status.style.color = '#4ecdc4';
+
+                showNotification('Camera started successfully!', 'success');
+
             } catch (error) {
-                console.error('Error accessing camera:', error);
-                status.textContent = 'Camera access denied';
+                console.error('Camera error:', error);
+                showError('Camera failed to start: ' + error.message);
+                status.textContent = 'Camera failed';
                 status.style.color = '#ff6b6b';
             }
         }
@@ -349,8 +1031,8 @@
         function captureFrame() {
             if (!stream) return null;
 
-            captureCanvas.width = video.videoWidth;
-            captureCanvas.height = video.videoHeight;
+            captureCanvas.width = video.videoWidth || 640;
+            captureCanvas.height = video.videoHeight || 480;
 
             const ctx = captureCanvas.getContext('2d');
             ctx.drawImage(video, 0, 0);
@@ -360,21 +1042,19 @@
 
         async function saveFrameToServer() {
             if (!stream) {
-                alert('Please start the camera first!');
+                showError('Please start the camera first!');
                 return;
             }
 
             const imageData = captureFrame();
             if (!imageData) {
-                alert('Failed to capture frame');
+                showError('Failed to capture frame');
                 return;
             }
 
-            // Show preview
             capturePreview.src = imageData;
             capturePreview.style.display = 'block';
 
-            // Show processing
             processing.style.display = 'block';
             saveButton.disabled = true;
             status.textContent = 'Starting 3D mesh generation...';
@@ -390,37 +1070,29 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    status.textContent = `✅ ${result.filename} saved`;
+                    showNotification(`Frame saved: ${result.filename}`, 'success');
+                    status.textContent = `✅ Frame saved - 3D generation started`;
+                    status.style.color = '#4ecdc4';
 
-                    if (result.comfyui_enabled) {
-                        status.textContent += ` | 3D mesh generating in ${result.delay_seconds}s...`;
+                    // Refresh models after a delay
+                    setTimeout(() => {
+                        if (modelsVisible) {
+                            loadModels();
+                        }
+                    }, 10000);
 
-                        // Update status after delay to show workflow was triggered
-                        setTimeout(() => {
-                            processing.style.display = 'none';
-                            saveButton.disabled = false;
-                            status.textContent = `🎨 3D mesh generation started! Check output folder.`;
-                            status.style.color = '#4ecdc4';
-                        }, (result.delay_seconds + 1) * 1000);
-
-                    } else {
-                        processing.style.display = 'none';
-                        saveButton.disabled = false;
-                        status.textContent += ` | No workflow configured`;
-                        status.style.color = '#4ecdc4';
-                    }
-
-                    console.log('Frame saved for 3D processing:', result.path);
                 } else {
-                    throw new Error(result.error);
+                    throw new Error(result.error || 'Unknown server error');
                 }
 
             } catch (error) {
                 console.error('Save error:', error);
-                processing.style.display = 'none';
-                saveButton.disabled = false;
+                showError('Failed to save frame: ' + error.message);
                 status.textContent = 'Failed to save frame';
                 status.style.color = '#ff6b6b';
+            } finally {
+                processing.style.display = 'none';
+                saveButton.disabled = false;
             }
         }
 
@@ -428,34 +1100,77 @@
         startButton.addEventListener('click', startCamera);
         stopButton.addEventListener('click', stopCamera);
         saveButton.addEventListener('click', saveFrameToServer);
+        document.getElementById('toggle-models').addEventListener('click', toggleModelsPanel);
+        document.getElementById('refresh-models').addEventListener('click', loadModels);
+        document.getElementById('load-latest').addEventListener('click', loadLatestModel);
+        document.getElementById('clear-scene').addEventListener('click', clearScene);
 
         // Animation loop
         function animate() {
             requestAnimationFrame(animate);
 
+            // Animate background shapes
             shapes.forEach(shape => {
                 shape.mesh.rotation.x += shape.rotationSpeed.x;
                 shape.mesh.rotation.y += shape.rotationSpeed.y;
                 shape.mesh.rotation.z += shape.rotationSpeed.z;
             });
 
-            sphere.position.y = -3 + Math.sin(Date.now() * 0.002) * 0.5;
-            camera.position.x = Math.sin(Date.now() * 0.0005) * 2;
-            camera.lookAt(0, 0, -5);
+            // Animate sphere position
+            sphere.position.y = -5 + Math.sin(Date.now() * 0.002) * 0.5;
+
+            // Gentle camera movement
+            camera.position.x = Math.sin(Date.now() * 0.0003) * 1;
+            camera.lookAt(0, 0, 0);
+
+            // Rotate loaded model slowly
+            if (currentLoadedModel) {
+                currentLoadedModel.rotation.y += 0.005;
+            }
 
             renderer.render(scene, camera);
         }
 
-        // Window resize
+        // Window resize handler
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        // Initialize
-        checkServer();
-        animate();
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Initializing 3D Mesh Viewer...');
+
+            // Start Three.js animation first
+            animate();
+
+            // Initialize GLTFLoader with delay to ensure scripts are loaded
+            setTimeout(() => {
+                initializeGLTFLoader();
+            }, 1000);
+
+            // Check server connection
+            setTimeout(() => {
+                checkServer();
+            }, 500);
+
+            console.log('✅ Application initialization started');
+        });
+
+        // Additional initialization after all scripts load
+        window.addEventListener('load', () => {
+            console.log('🔄 Window fully loaded, re-checking GLTFLoader...');
+
+            // Try again if not already ready
+            if (!loaderReady) {
+                setTimeout(() => {
+                    initializeGLTFLoader();
+                }, 2000);
+            }
+        });
+
+        console.log('🎮 3D Mesh Viewer scripts loaded');
     </script>
 </body>
 </html>

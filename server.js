@@ -1,29 +1,27 @@
-﻿// app.js - Node.js Express Server
+﻿// server.js - Node.js Express Server with Fixed Model Loading
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const fetch = require('node-fetch'); // Add this dependency
+const fetch = require('node-fetch');
 
 const app = express();
 const PORT = 3000;
 
 // CONFIGURE YOUR COMFYUI SETTINGS HERE
-const COMFYUI_INPUT_FOLDER = 'D:/ComfyUI_windows_portable_nvidia/ComfyUI_windows_portable/ComfyUI/input'; // Windows example
-const COMFYUI_OUTPUT_FOLDER = 'D:/ComfyUI_windows_portable_nvidia/webcam-comfyui-3D-app-main/public/models/mesh'; // ComfyUI output folder
-// const COMFYUI_INPUT_FOLDER = '/home/user/ComfyUI/input/'; // Linux example
-// const COMFYUI_OUTPUT_FOLDER = '/home/user/ComfyUI/output/'; // Linux example
-// const COMFYUI_INPUT_FOLDER = '/Users/username/ComfyUI/input/'; // Mac example
-// const COMFYUI_OUTPUT_FOLDER = '/Users/username/ComfyUI/output/'; // Mac example
+const COMFYUI_INPUT_FOLDER = 'D:/ComfyUI_windows_portable_nvidia/ComfyUI_windows_portable/ComfyUI/input';
+// UPDATED: Use your specific model directory
+const COMFYUI_OUTPUT_FOLDER = 'D:/ComfyUI_windows_portable_nvidia/webcam-comfyui-3D-app-main/public/models';
+const MODEL_MESH_FOLDER = 'D:/ComfyUI_windows_portable_nvidia/webcam-comfyui-3D-app-main/public/models/mesh';
 
-const COMFYUI_API_URL = 'http://127.0.0.1:8188'; // Default ComfyUI API URL
-const COMFYUI_WORKFLOW_FILE = './workflow.json'; // Path to your workflow JSON file
-const PROMPT_DELAY_SECONDS = 5; // Delay before triggering workflow
+const COMFYUI_API_URL = 'http://127.0.0.1:8188';
+const COMFYUI_WORKFLOW_FILE = './workflow.json';
+const PROMPT_DELAY_SECONDS = 5;
 
-// FIXED FILENAMES (will overwrite each time)
-const INPUT_FILENAME = 'webcam_input.jpg'; // Fixed input filename
-const OUTPUT_PREFIX = 'webcam_3d_mesh'; // Fixed output prefix for 3D mesh files
-const MESH_FOLDER = 'mesh'; // Folder for mesh outputs
+// FIXED FILENAMES
+const INPUT_FILENAME = 'webcam_input.jpg';
+const OUTPUT_PREFIX = 'webcam_3d_mesh';
+const MESH_FOLDER = 'mesh'; // Relative folder name
 
 // Load ComfyUI workflow template
 let workflowTemplate = {};
@@ -42,7 +40,9 @@ try {
 
 // Ensure directories exist
 console.log('🔍 Checking directories...');
-[COMFYUI_INPUT_FOLDER, COMFYUI_OUTPUT_FOLDER].forEach(dir => {
+const dirsToCheck = [COMFYUI_INPUT_FOLDER, COMFYUI_OUTPUT_FOLDER, MODEL_MESH_FOLDER];
+
+dirsToCheck.forEach(dir => {
     if (!fs.existsSync(dir)) {
         try {
             fs.mkdirSync(dir, { recursive: true });
@@ -58,50 +58,83 @@ console.log('🔍 Checking directories...');
 // Middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static('public'));
-app.use(express.static('./')); // Serve files from current directory (for index.html)
+app.use(express.static('./')); // Serve files from current directory
 
-// Serve ComfyUI output files
-app.use('/output', express.static(COMFYUI_OUTPUT_FOLDER, {
+// IMPORTANT: Serve the models directory with proper CORS headers
+app.use('/models', express.static(COMFYUI_OUTPUT_FOLDER, {
     setHeaders: (res, filePath) => {
-        // Set CORS headers for GLB files
+        console.log(`📁 Serving file: ${filePath}`);
+        // Set CORS headers for all model files
+        res.set('Access-Control-Allow-Origin', '*');
+        res.set('Access-Control-Allow-Methods', 'GET');
+        res.set('Access-Control-Allow-Headers', 'Content-Type');
+        
+        // Set appropriate content types
         if (filePath.endsWith('.glb')) {
-            res.set('Access-Control-Allow-Origin', '*');
             res.set('Content-Type', 'model/gltf-binary');
+        } else if (filePath.endsWith('.gltf')) {
+            res.set('Content-Type', 'model/gltf+json');
         }
     }
 }));
 
-// Function to find the latest GLB file
-function findLatestGLBFile() {
+// Also serve direct access to mesh folder
+app.use('/mesh', express.static(MODEL_MESH_FOLDER, {
+    setHeaders: (res, filePath) => {
+        console.log(`📦 Serving mesh file: ${filePath}`);
+        res.set('Access-Control-Allow-Origin', '*');
+        res.set('Content-Type', 'model/gltf-binary');
+    }
+}));
+
+// Function to find GLB files in the mesh folder
+function findGLBFiles() {
     try {
-        const meshFolder = path.join(COMFYUI_OUTPUT_FOLDER, MESH_FOLDER);
+        console.log(`🔍 Scanning for GLB files in: ${MODEL_MESH_FOLDER}`);
         
-        if (!fs.existsSync(meshFolder)) {
-            return null;
+        if (!fs.existsSync(MODEL_MESH_FOLDER)) {
+            console.log(`❌ Mesh folder does not exist: ${MODEL_MESH_FOLDER}`);
+            return [];
         }
 
-        const files = fs.readdirSync(meshFolder)
-            .filter(file => file.endsWith('.glb') && file.startsWith(OUTPUT_PREFIX))
+        const files = fs.readdirSync(MODEL_MESH_FOLDER)
+            .filter(file => {
+                const isGLB = file.toLowerCase().endsWith('.glb');
+                if (isGLB) {
+                    console.log(`✅ Found GLB file: ${file}`);
+                }
+                return isGLB;
+            })
             .map(file => {
-                const fullPath = path.join(meshFolder, file);
+                const fullPath = path.join(MODEL_MESH_FOLDER, file);
                 const stats = fs.statSync(fullPath);
                 return {
                     name: file,
                     path: fullPath,
-                    relativePath: `${MESH_FOLDER}/${file}`,
-                    mtime: stats.mtime
+                    url: `/mesh/${file}`, // Direct URL to mesh folder
+                    size: stats.size,
+                    created: stats.mtime,
+                    modified: stats.mtime
                 };
             })
-            .sort((a, b) => b.mtime - a.mtime);
+            .sort((a, b) => b.created - a.created); // Sort by newest first
 
-        return files.length > 0 ? files[0] : null;
+        console.log(`📊 Found ${files.length} GLB files total`);
+        return files;
+        
     } catch (error) {
-        console.error('Error finding GLB files:', error);
-        return null;
+        console.error('❌ Error scanning for GLB files:', error);
+        return [];
     }
 }
 
-// Function to update workflow with fixed filenames
+// Function to find the latest GLB file
+function findLatestGLBFile() {
+    const files = findGLBFiles();
+    return files.length > 0 ? files[0] : null;
+}
+
+// Function to update workflow with image filename
 function updateWorkflowWithImage(workflow, imageName) {
     const updatedWorkflow = JSON.parse(JSON.stringify(workflow)); // Deep clone
     
@@ -117,23 +150,16 @@ function updateWorkflowWithImage(workflow, imageName) {
             }
         }
         
-        // Update SaveImage nodes to use fixed output prefix
-        if (node.class_type === 'SaveImage') {
-            if (node.inputs && node.inputs.filename_prefix) {
-                node.inputs.filename_prefix = OUTPUT_PREFIX;
-                console.log(`Updated SaveImage node ${nodeId} with prefix: ${OUTPUT_PREFIX}`);
-            }
-        }
-        
-        // Update SaveGLB nodes (for 3D mesh output)
+        // Update SaveGLB nodes to save to our mesh folder
         if (node.class_type === 'SaveGLB') {
             if (node.inputs && node.inputs.filename_prefix) {
-                node.inputs.filename_prefix = `${MESH_FOLDER}/${OUTPUT_PREFIX}`;
-                console.log(`Updated SaveGLB node ${nodeId} with prefix: ${MESH_FOLDER}/${OUTPUT_PREFIX}`);
+                // Set the output to save directly to our mesh folder
+                node.inputs.filename_prefix = `${OUTPUT_PREFIX}`;
+                console.log(`Updated SaveGLB node ${nodeId} with prefix: ${OUTPUT_PREFIX}`);
             }
         }
         
-        // Check for other image input nodes
+        // Update other image input nodes
         if (node.class_type === 'LoadImageMask' || node.class_type === 'ImageInput') {
             if (node.inputs && node.inputs.image) {
                 node.inputs.image = imageName;
@@ -151,9 +177,13 @@ async function queueComfyUIPrompt(workflow, filename) {
         console.log('🔍 Checking ComfyUI connection...');
         
         // Check if ComfyUI is running
-        const healthCheck = await fetch(`${COMFYUI_API_URL}/system_stats`, { timeout: 5000 });
+        const healthCheck = await fetch(`${COMFYUI_API_URL}/system_stats`, { 
+            timeout: 5000,
+            headers: { 'User-Agent': 'webcam-comfyui-app' }
+        });
+        
         if (!healthCheck.ok) {
-            throw new Error('ComfyUI server not responding');
+            throw new Error(`ComfyUI server returned status: ${healthCheck.status}`);
         }
 
         console.log('✅ ComfyUI is responding');
@@ -173,14 +203,16 @@ async function queueComfyUIPrompt(workflow, filename) {
         const response = await fetch(`${COMFYUI_API_URL}/prompt`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'User-Agent': 'webcam-comfyui-app'
             },
             body: JSON.stringify(promptData),
             timeout: 10000
         });
 
         if (!response.ok) {
-            throw new Error(`ComfyUI API error: ${response.status} ${response.statusText}`);
+            const errorText = await response.text();
+            throw new Error(`ComfyUI API error: ${response.status} ${response.statusText} - ${errorText}`);
         }
 
         const result = await response.json();
@@ -212,7 +244,6 @@ app.post('/save-frame', async (req, res) => {
             return res.status(400).json({ error: 'Missing imageData' });
         }
 
-        // Use fixed filename instead of timestamp
         const filename = INPUT_FILENAME;
 
         // Remove data:image/jpeg;base64, prefix
@@ -224,9 +255,9 @@ app.post('/save-frame', async (req, res) => {
         // Full path for the file
         const filePath = path.join(COMFYUI_INPUT_FOLDER, filename);
         
-        // Write file to ComfyUI input folder (will overwrite existing)
+        // Write file to ComfyUI input folder
         fs.writeFileSync(filePath, buffer);
-        console.log(`💾 Frame saved (overwritten): ${filePath}`);
+        console.log(`💾 Frame saved: ${filePath}`);
         
         // Send immediate response
         res.json({ 
@@ -236,10 +267,10 @@ app.post('/save-frame', async (req, res) => {
             path: filePath,
             comfyui_enabled: Object.keys(workflowTemplate).length > 0,
             delay_seconds: PROMPT_DELAY_SECONDS,
-            overwrite_mode: true
+            mesh_folder: MODEL_MESH_FOLDER
         });
 
-        // Queue ComfyUI workflow after delay (if workflow is loaded)
+        // Queue ComfyUI workflow after delay
         if (Object.keys(workflowTemplate).length > 0) {
             console.log(`⏰ Waiting ${PROMPT_DELAY_SECONDS} seconds before queuing ComfyUI workflow...`);
             
@@ -249,7 +280,7 @@ app.post('/save-frame', async (req, res) => {
                 if (result.success) {
                     console.log(`🎨 ComfyUI workflow queued successfully for ${filename}`);
                     console.log(`   📋 Prompt ID: ${result.prompt_id}, Queue Number: ${result.number}`);
-                    console.log(`   📁 3D Mesh output will be saved as: ${MESH_FOLDER}/${OUTPUT_PREFIX}_XXXXX.glb`);
+                    console.log(`   📁 3D Mesh will be saved to: ${MODEL_MESH_FOLDER}/${OUTPUT_PREFIX}_XXXXX.glb`);
                 } else {
                     console.log(`❌ Failed to queue ComfyUI workflow: ${result.error}`);
                 }
@@ -270,23 +301,20 @@ app.get('/latest-model', (req, res) => {
         const latestModel = findLatestGLBFile();
         
         if (latestModel) {
+            console.log(`📦 Latest model: ${latestModel.name}`);
             res.json({
                 success: true,
-                model: {
-                    name: latestModel.name,
-                    url: `/output/${latestModel.relativePath}`,
-                    created: latestModel.mtime,
-                    size: fs.statSync(latestModel.path).size
-                }
+                model: latestModel
             });
         } else {
+            console.log('📭 No GLB models found');
             res.json({
                 success: false,
                 message: 'No GLB models found'
             });
         }
     } catch (error) {
-        console.error('Error getting latest model:', error);
+        console.error('❌ Error getting latest model:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to check for models'
@@ -297,38 +325,19 @@ app.get('/latest-model', (req, res) => {
 // Route to list all GLB models
 app.get('/models', (req, res) => {
     try {
-        const meshFolder = path.join(COMFYUI_OUTPUT_FOLDER, MESH_FOLDER);
+        const models = findGLBFiles();
         
-        if (!fs.existsSync(meshFolder)) {
-            return res.json({
-                success: true,
-                models: [],
-                message: 'Mesh output folder does not exist'
-            });
-        }
-
-        const files = fs.readdirSync(meshFolder)
-            .filter(file => file.endsWith('.glb') && file.startsWith(OUTPUT_PREFIX))
-            .map(file => {
-                const fullPath = path.join(meshFolder, file);
-                const stats = fs.statSync(fullPath);
-                return {
-                    name: file,
-                    url: `/output/${MESH_FOLDER}/${file}`,
-                    created: stats.mtime,
-                    size: stats.size
-                };
-            })
-            .sort((a, b) => b.created - a.created);
-
+        console.log(`📋 Listing ${models.length} models`);
+        
         res.json({
             success: true,
-            models: files,
-            count: files.length
+            models: models,
+            count: models.length,
+            mesh_folder: MODEL_MESH_FOLDER
         });
         
     } catch (error) {
-        console.error('Error listing models:', error);
+        console.error('❌ Error listing models:', error);
         res.status(500).json({
             success: false,
             error: 'Failed to list models'
@@ -341,48 +350,83 @@ app.get('/config', (req, res) => {
     res.json({ 
         saveLocation: COMFYUI_INPUT_FOLDER,
         outputLocation: COMFYUI_OUTPUT_FOLDER,
+        meshFolder: MODEL_MESH_FOLDER,
         comfyuiApiUrl: COMFYUI_API_URL,
         workflowLoaded: Object.keys(workflowTemplate).length > 0,
         delaySeconds: PROMPT_DELAY_SECONDS,
         inputFilename: INPUT_FILENAME,
         outputPrefix: OUTPUT_PREFIX,
-        meshFolder: MESH_FOLDER,
         workflowType: '3D Mesh Generation (Hunyuan3D)',
-        overwriteMode: true,
         inputExists: fs.existsSync(COMFYUI_INPUT_FOLDER),
-        outputExists: fs.existsSync(COMFYUI_OUTPUT_FOLDER)
+        outputExists: fs.existsSync(COMFYUI_OUTPUT_FOLDER),
+        meshFolderExists: fs.existsSync(MODEL_MESH_FOLDER)
     });
 });
 
-// Route to debug model files
+// Route to test ComfyUI connection
+app.get('/test-comfyui', async (req, res) => {
+    try {
+        console.log('🧪 Testing ComfyUI connection...');
+        const response = await fetch(`${COMFYUI_API_URL}/system_stats`, { 
+            timeout: 5000,
+            headers: { 'User-Agent': 'webcam-comfyui-app' }
+        });
+        
+        if (response.ok) {
+            const stats = await response.json();
+            console.log('✅ ComfyUI connection test successful');
+            res.json({ 
+                success: true, 
+                message: 'ComfyUI is running',
+                stats: stats
+            });
+        } else {
+            console.log(`❌ ComfyUI returned status: ${response.status}`);
+            res.json({ 
+                success: false, 
+                message: `ComfyUI returned status: ${response.status}`
+            });
+        }
+    } catch (error) {
+        console.log(`❌ Cannot connect to ComfyUI: ${error.message}`);
+        res.json({ 
+            success: false, 
+            message: `Cannot connect to ComfyUI: ${error.message}`
+        });
+    }
+});
+
+// Route to debug model files and paths
 app.get('/debug-models', (req, res) => {
     try {
-        const meshFolder = path.join(COMFYUI_OUTPUT_FOLDER, MESH_FOLDER);
         const debugInfo = {
-            meshFolder: meshFolder,
-            meshFolderExists: fs.existsSync(meshFolder),
-            comfyuiOutputFolder: COMFYUI_OUTPUT_FOLDER,
-            comfyuiOutputExists: fs.existsSync(COMFYUI_OUTPUT_FOLDER),
-            files: []
+            configuredPaths: {
+                comfyuiOutput: COMFYUI_OUTPUT_FOLDER,
+                meshFolder: MODEL_MESH_FOLDER,
+                outputPrefix: OUTPUT_PREFIX
+            },
+            pathStatus: {
+                outputExists: fs.existsSync(COMFYUI_OUTPUT_FOLDER),
+                meshExists: fs.existsSync(MODEL_MESH_FOLDER)
+            },
+            foundFiles: []
         };
 
-        if (fs.existsSync(meshFolder)) {
-            const allFiles = fs.readdirSync(meshFolder);
+        // Check what files exist in the mesh folder
+        if (fs.existsSync(MODEL_MESH_FOLDER)) {
+            const allFiles = fs.readdirSync(MODEL_MESH_FOLDER);
             debugInfo.allFiles = allFiles;
             
-            const glbFiles = allFiles.filter(file => file.endsWith('.glb'));
-            debugInfo.glbFiles = glbFiles;
-            
-            glbFiles.forEach(file => {
-                const fullPath = path.join(meshFolder, file);
+            allFiles.forEach(file => {
+                const fullPath = path.join(MODEL_MESH_FOLDER, file);
                 const stats = fs.statSync(fullPath);
-                debugInfo.files.push({
+                debugInfo.foundFiles.push({
                     name: file,
                     fullPath: fullPath,
-                    relativePath: `${MESH_FOLDER}/${file}`,
+                    url: `/mesh/${file}`,
                     size: stats.size,
                     created: stats.mtime,
-                    url: `/output/${MESH_FOLDER}/${file}`
+                    isGLB: file.toLowerCase().endsWith('.glb')
                 });
             });
         }
@@ -395,28 +439,24 @@ app.get('/debug-models', (req, res) => {
         });
     }
 });
-app.get('/test-comfyui', async (req, res) => {
-    try {
-        const response = await fetch(`${COMFYUI_API_URL}/system_stats`, { timeout: 5000 });
-        if (response.ok) {
-            const stats = await response.json();
-            res.json({ 
-                success: true, 
-                message: 'ComfyUI is running',
-                stats: stats
-            });
-        } else {
-            res.json({ 
-                success: false, 
-                message: `ComfyUI returned status: ${response.status}`
-            });
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        paths: {
+            input: COMFYUI_INPUT_FOLDER,
+            output: COMFYUI_OUTPUT_FOLDER,
+            mesh: MODEL_MESH_FOLDER
+        },
+        pathsExist: {
+            input: fs.existsSync(COMFYUI_INPUT_FOLDER),
+            output: fs.existsSync(COMFYUI_OUTPUT_FOLDER),
+            mesh: fs.existsSync(MODEL_MESH_FOLDER)
         }
-    } catch (error) {
-        res.json({ 
-            success: false, 
-            message: `Cannot connect to ComfyUI: ${error.message}`
-        });
-    }
+    });
 });
 
 // Error handling middleware
@@ -448,27 +488,31 @@ app.listen(PORT, () => {
     console.log(`🌐 Server running at: http://localhost:${PORT}`);
     console.log(`📁 Input frames: ${COMFYUI_INPUT_FOLDER}`);
     console.log(`📁 Output models: ${COMFYUI_OUTPUT_FOLDER}`);
+    console.log(`📁 Mesh folder: ${MODEL_MESH_FOLDER}`);
     console.log(`🔗 ComfyUI API URL: ${COMFYUI_API_URL}`);
     console.log(`⏰ Workflow delay: ${PROMPT_DELAY_SECONDS} seconds`);
-    console.log(`📄 Input filename: ${INPUT_FILENAME} (overwrites)`);
-    console.log(`🎨 3D Mesh output: ${MESH_FOLDER}/${OUTPUT_PREFIX}_XXXXX.glb`);
-    console.log(`🤖 Workflow type: Hunyuan3D - Image to 3D Mesh`);
+    console.log(`📄 Input filename: ${INPUT_FILENAME}`);
+    console.log(`🎨 3D Mesh output: ${OUTPUT_PREFIX}_XXXXX.glb`);
     console.log('🚀 ================================\n');
     
     // Check for existing models on startup
-    const latestModel = findLatestGLBFile();
-    if (latestModel) {
-        console.log(`✅ Found existing 3D model: ${latestModel.name}`);
-        console.log(`   🔗 Available at: /output/${latestModel.relativePath}`);
+    const models = findGLBFiles();
+    if (models.length > 0) {
+        console.log(`✅ Found ${models.length} existing 3D model(s):`);
+        models.forEach((model, index) => {
+            console.log(`   ${index + 1}. ${model.name} (${(model.size / 1024 / 1024).toFixed(2)} MB)`);
+        });
+        console.log(`   🔗 Models available at: /mesh/[filename]`);
     } else {
-        console.log(`📁 No existing 3D models found in output folder`);
+        console.log(`📁 No existing 3D models found in: ${MODEL_MESH_FOLDER}`);
     }
     
     if (Object.keys(workflowTemplate).length === 0) {
         console.log('\n⚠️  No workflow loaded. Create workflow.json to enable automatic prompting.');
     } else {
-        console.log(`\n✅ Hunyuan3D workflow template loaded and ready (${Object.keys(workflowTemplate).length} nodes)`);
+        console.log(`\n✅ Hunyuan3D workflow template loaded (${Object.keys(workflowTemplate).length} nodes)`);
     }
     
-    console.log('\n🎯 Ready for webcam captures! Open http://localhost:3000 in your browser\n');
+    console.log('\n🎯 Ready for webcam captures! Open http://localhost:3000 in your browser');
+    console.log(`🐛 Debug models at: http://localhost:3000/debug-models\n`);
 });
